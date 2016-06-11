@@ -1,138 +1,113 @@
-import { onResize, setHeight } from './utils/resizeWindow';
-import createNoise from './utils/createNoise';
-import { onMouseMove, distance } from './utils/onMouseMove';
+import canvasRunner from './utils/canvasRunner';
+import Noise from './utils/Noise';
+import { onResize } from './utils/resizeWindow';
+import { onMouseMove, distance, hideMouse } from './utils/onMouseMove';
 import random from './utils/random';
-import { dynamicInterval } from './utils/dynamicInterval';
-const btwnLinear = (max, min, n) => min + ((max - min) * n); //todo, make utility
+// import { dynamicInterval } from './utils/dynamicInterval';
+import { betweenLinear, portion, times } from './utils/misc';
 import colors from './utils/colors';
 const { setHsvOnHex, applyToHex } = colors; // ytf do i need to do this?
 
+
 const canvas = document.getElementById('canvas');
+const BASE_SIZE = 1200 * 800;
+const BASE_MIN_LINES = 250;
+const BASE_MAX_LINES = 1500;
+const BASE_COLOR = applyToHex('#FF0000', {v: -0.2});
+const COLOR_SPEED = 150;
+
 
 let { innerWidth, innerHeight } = window;
 
-let centerX = innerWidth / 2;
-let centerY = innerHeight / 2;
+const $ = {
+  innerWidth,
+  innerHeight,
+  centerX: innerWidth / 2,
+  centerY: innerHeight / 2,
+  minLines: BASE_MIN_LINES,
+  maxLines: BASE_MAX_LINES,
+  centerDist: 1,
+  currentColor: BASE_COLOR,
 
-const baseSize = 1200 * 800;
-const baseMinLines = 250;
-const baseMaxLines = 1500;
-let minLines = baseMinLines;
-let maxLines = baseMaxLines;
+  noise: new Noise(),
+};
+const distFromCenter = (w, h) => distance(
+  [$.centerX, $.centerY], [w, h], true
+);
+$.maxDist = distFromCenter($.innerWidth, $.innerHeight);
+$.distancePortion = portion($.maxDist, $.centerDist);
 
-let centerDist = 1;
-let maxDist = Math.round(distance(
-  [centerX, centerY],
-  [innerWidth, innerHeight]
-));
-
-let distancePortion = (maxDist - centerDist) / (maxDist+1);
-
-const baseColor = applyToHex('#ff0000', {v: -0.2});
-let currentColor = baseColor;
-setInterval(() =>
-  currentColor = applyToHex(currentColor, {h: 1})
-, 100)
+function setColor() {
+  $.currentColor = applyToHex($.currentColor, {h: 1});
+}
+setInterval(setColor, COLOR_SPEED);
 
 onResize(
-  setHeight(canvas),
-  (w, h) => ([innerWidth, innerHeight] = [w, h]),
-  (w, h) => ([centerX, centerY] = [w / 2, h / 2]),
-  (w, h) => maxDist = Math.round(distance(
-    [centerX, centerY],
-    [w, h]
-  )),
+  (w, h) => ([$.innerWidth, $.innerHeight] = [w, h]),
+  (w, h) => ([$.centerX, $.centerY] = [w / 2, h / 2]),
+  (w, h) => $.maxDist = distFromCenter(w, h),
   (w, h) => {
     const totalSize = w * h;
-    const adjustment = totalSize / baseSize;
+    const adjustment = totalSize / BASE_SIZE;
 
-    maxLines = baseMaxLines * adjustment;
-    minLines = baseMinLines * adjustment;
+    $.maxLines = BASE_MAX_LINES * adjustment;
+    $.minLines = BASE_MIN_LINES * adjustment;
   }
 );
 
-let cursorVisable;
 onMouseMove(
+  hideMouse,
+
   (x, y) => {
-    centerDist = Math.round(
-      distance([centerX, centerY], [x, y])
-    ) + 1;
-    distancePortion = (maxDist - centerDist) / (maxDist+1);
+    $.centerDist = distFromCenter(x, y) + 1;
+    $.distancePortion = portion($.maxDist, $.centerDist);
   },
+
   () => {
-    const hueChange = 10;
-    // const h = random(-hueChange, hueChange);
-    const s = btwnLinear(1, 0.2, distancePortion);
-    currentColor = setHsvOnHex(currentColor, { s });
-  },
-  // hide mouse if it's not moving
-  () => {
-    if (cursorVisable) clearTimeout(cursorVisable);
-    document.body.style.cursor = '';
-    cursorVisable = setTimeout(() => {
-      document.body.style.cursor = 'none';
-    }, 100);
+    const s = betweenLinear($.distancePortion, 1, 0.2);
+    $.currentColor = setHsvOnHex($.currentColor, { s });
   }
 );
 
 function drawLines(ctx) {
-  const numOfLines = btwnLinear(maxLines, minLines, distancePortion);
+  const numOfLines = betweenLinear(
+    $.distancePortion, $.maxLines, $.minLines
+  );
 
-  for (let i = 0; i <= numOfLines; i++) {
+  const drawLine = () => {
     ctx.bezierCurveTo(
-      random(innerWidth),
-      random(innerHeight),
-      random(innerWidth),
-      random(innerHeight),
-      random(innerWidth),
-      random(innerHeight)
+      random($.innerWidth),
+      random($.innerHeight),
+      random($.innerWidth),
+      random($.innerHeight),
+      random($.innerWidth),
+      random($.innerHeight)
     );
-  }
+  };
+
+  times(numOfLines, drawLine);
+}
+
+function init(ctx) {
+  ctx.lineWidth = 1;
+  $.noise.start();
 }
 
 function frame(ctx) {
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = currentColor;
+  ctx.strokeStyle = $.currentColor;
 
   ctx.beginPath();
-  ctx.moveTo(random(innerWidth), random(innerHeight));
+  ctx.moveTo(random($.innerWidth), random($.innerHeight));
 
   drawLines(ctx);
 
   ctx.stroke();
 }
 
-function withFrame(fn) {
-  const fastFR = 10;
-  const slowFR = 20;
-  setInterval(fn, 1000/60)
+canvasRunner(
+  canvas,
+  init,
+  frame
+);
 
-  // let currentFR = slowFR;
-  // const changeFR = dynamicInterval(fn, currentFR);
-
-  // setInterval(() => {
-  //   currentFR = currentFR === slowFR ? fastFR : slowFR;
-  //   changeFR(currentFR);
-  // }, 300)
-}
-
-function draw(ctx) {
-  withFrame(() => {
-    // clear the frame
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
-    // set the frame
-    frame(ctx);
-  });
-
-  // createNoise();
-}
-
-function withCanvas(can, fn) {
-  if (can.getContext) {
-    let ctx = can.getContext('2d');
-    fn(ctx);
-  }
-}
-
-withCanvas(canvas, draw);
 console.log('Source: https://github.com/scyclow'); // eslint-disable-line
