@@ -55,6 +55,7 @@ class Noise {
 
   start() {
     this.nodes.source.start(0);
+    return this;
   }
 
   kill() {

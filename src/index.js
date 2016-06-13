@@ -30,6 +30,7 @@ const $ = {
   currentColor: BASE_COLOR,
 
   noise: new Noise(),
+  noise2: new Noise(),
 };
 const distFromCenter = (w, h) => distance(
   [$.centerX, $.centerY], [w, h], true
@@ -41,6 +42,8 @@ function setColor() {
   $.currentColor = applyToHex($.currentColor, {h: 1});
 }
 setInterval(setColor, COLOR_SPEED);
+
+window.$ = $;
 
 onResize(
   (w, h) => ([$.innerWidth, $.innerHeight] = [w, h]),
@@ -74,6 +77,8 @@ function drawLines(ctx) {
     $.distancePortion, $.maxLines, $.minLines
   );
 
+  // ctx.strokeStyle = random(0,2) ? $.currentColor : applyToHex($.currentColor, {h: 10})
+
   const drawLine = () => {
     ctx.bezierCurveTo(
       random($.innerWidth),
@@ -91,6 +96,9 @@ function drawLines(ctx) {
 function init(ctx) {
   ctx.lineWidth = 1;
   $.noise.start();
+  $.noise2.start().upNote(1000);
+  $.noise.nodes.source.type = 'square';
+  $.noise2.nodes.source.type = 'square';
 }
 
 function frame(ctx) {
@@ -107,7 +115,8 @@ function frame(ctx) {
 canvasRunner(
   canvas,
   init,
-  frame
+  frame,
+  60
 );
 
 console.log('Source: https://github.com/scyclow'); // eslint-disable-line
