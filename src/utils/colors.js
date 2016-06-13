@@ -1,3 +1,5 @@
+import { between } from './misc';
+
 function numToHex(num) {
   let hex = Math.round( Math.min(num, 255) ).toString(16);
   return (hex.length === 1 ? '0' + hex : hex).toUpperCase();
@@ -96,11 +98,6 @@ const wrap = (number, max) => (
   number
 );
 
-const between = (n, max, min) => Math.max(
-  Math.min(n, max),
-  min
-);
-
 function applyToHex(hex, {h=0, s=0, v=0} = {}, mod=1) {
   let hsv = hexToHsv(hex);
   return hsvToHex({
@@ -117,7 +114,7 @@ function setHsvOnHex(hex, {h, s, v}) {
     h: !isNaN(h) ?    wrap(h, 360)  : hsv.h,
     s: !isNaN(s) ? between(s, 1, 0) : hsv.s,
     v: !isNaN(v) ? between(v, 1, 0) : hsv.v
-  })
+  });
 }
 
 const randMax = (ceil) => Math.floor(

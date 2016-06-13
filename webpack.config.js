@@ -7,7 +7,7 @@ module.exports = {
 
   output: {
     path: __dirname + '/build',
-    filename: 'error.js'
+    filename: 'build.js'
   },
 
   devtool: 'source-map',
